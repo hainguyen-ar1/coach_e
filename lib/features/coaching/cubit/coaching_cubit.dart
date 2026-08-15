@@ -9,6 +9,8 @@ class CoachingState {
     required this.step,
     required this.draft,
     this.errorMessage,
+    this.completedSessionId,
+    this.isCompleting = false,
   });
 
   const CoachingState.initial()
@@ -20,19 +22,30 @@ class CoachingState {
   final CoachingStep step;
   final CoachingSessionDraft draft;
   final String? errorMessage;
+  final String? completedSessionId;
+  final bool isCompleting;
 
   bool get canSubmitResponse => draft.response.trim().length >= 12;
+  bool get canCompleteSession =>
+      draft.feedback != null && completedSessionId == null && !isCompleting;
 
   CoachingState copyWith({
     CoachingStep? step,
     CoachingSessionDraft? draft,
     String? errorMessage,
+    String? completedSessionId,
+    bool? isCompleting,
     bool clearError = false,
+    bool clearCompletedSession = false,
   }) {
     return CoachingState(
       step: step ?? this.step,
       draft: draft ?? this.draft,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      completedSessionId: clearCompletedSession
+          ? null
+          : completedSessionId ?? this.completedSessionId,
+      isCompleting: isCompleting ?? this.isCompleting,
     );
   }
 }
@@ -116,14 +129,38 @@ class CoachingCubit extends Cubit<CoachingState> {
           response: response,
           feedback: _feedbackFor(goal, mode, response),
         ),
+        clearCompletedSession: true,
         clearError: true,
       ),
     );
   }
 
-  void completeSession() {
-    if (state.draft.feedback == null) return;
-    emit(state.copyWith(step: CoachingStep.summary, clearError: true));
+  Future<void> completeSession({
+    required Future<CoachingSessionSummary> Function(CoachingSessionDraft draft)
+    saveSession,
+  }) async {
+    if (!state.canCompleteSession) return;
+
+    emit(state.copyWith(isCompleting: true, clearError: true));
+
+    try {
+      final summary = await saveSession(state.draft);
+      emit(
+        state.copyWith(
+          step: CoachingStep.summary,
+          completedSessionId: summary.id,
+          isCompleting: false,
+          clearError: true,
+        ),
+      );
+    } on Object {
+      emit(
+        state.copyWith(
+          isCompleting: false,
+          errorMessage: 'Không lưu được phiên này. Hãy thử hoàn tất lại.',
+        ),
+      );
+    }
   }
 
   void backToGoal() {

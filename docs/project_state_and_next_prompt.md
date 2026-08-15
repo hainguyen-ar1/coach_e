@@ -72,6 +72,10 @@ Current coaching feature:
 - Accepts a text response.
 - Generates deterministic placeholder feedback.
 - Shows a short session summary.
+- Saves completed session summaries locally.
+- Shows recent sessions on Home.
+- Supports reopening read-only session summaries.
+- Supports clearing local history for development.
 - Supports reset/start-over.
 
 ### Dependencies
@@ -155,29 +159,34 @@ git diff --check
   - feedback panel
   - summary panel
   - reset/start-over action
+- Local coaching session history:
+  - `CoachingSessionSummary`
+  - `CoachingHistoryRepository` backed by `shared_preferences`
+  - `CoachingHistoryCubit`
+  - Home recent sessions section
+  - read-only session summary route
+  - clear-history action
 
 ## What is still missing
 
-- No local persistence for session drafts.
 - No backend/API contracts for Coach E.
 - No DI setup yet for feature services/repositories.
 - No i18n assets wired yet.
 - No Firebase initialization or push flow wired yet.
 - No real AI/backend feedback yet.
 - No audio recording flow yet.
-- No multi-session history yet.
+- No editable/resumable in-progress session drafts yet.
 
 ## Recommended next feature slice
 
-Build local session persistence and history, without backend.
+Build the first deeper coaching workflow, still without backend.
 
 The next useful loop should let a learner:
 
-1. Complete a coaching session.
-2. Save the completed summary locally.
-3. Return to home and see recent sessions.
-4. Reopen a session summary.
-5. Clear local history for development.
+1. Choose a specific practice path, such as interview answers or speaking confidence.
+2. Work through 2-3 prompt turns in one session.
+3. See feedback per turn and a stronger final summary.
+4. Compare the current session with recent local history.
 
 Suggested goals:
 
@@ -198,26 +207,27 @@ Suggested practice modes:
 Use this prompt to continue:
 
 ```text
-Implement local coaching session history for Coach E.
+Implement a deeper multi-turn coaching practice flow for Coach E.
 
 Context:
 - Read AGENTS.md, docs/coach_e_requirements.md, docs/stranger_confide_reuse_plan.md, and docs/project_state_and_next_prompt.md first.
 - Do not integrate backend yet.
 - Keep hardcoded/local auth as-is.
-- Use the existing app shell, go_router, flutter_bloc, cyr_app_kit theme, and completed CoachingCubit flow.
+- Use the existing app shell, go_router, flutter_bloc, cyr_app_kit theme, completed CoachingCubit flow, and local session history.
 - Follow package imports and flutter_lints.
 
 Goal:
-Persist completed local coaching summaries and show them from the home/coaching area.
+Make one coaching practice mode feel more complete by supporting multiple prompt turns before final feedback.
 
 Requirements:
-1. Add a local session summary model.
-2. Add a local repository/service using shared_preferences.
-3. Save a summary when the learner completes a coaching session.
-4. Show recent sessions on Home or a dedicated History section.
-5. Add a clear-history development action.
-5. Add focused widget tests for the flow.
-6. Run:
+1. Pick one initial path, preferably Speaking confidence + Text response.
+2. Add 2-3 deterministic prompt turns in one session.
+3. Track each learner response locally inside the active session.
+4. Generate per-turn placeholder feedback.
+5. Generate a final summary that still saves to local history.
+6. Keep reopen summary read-only.
+7. Add focused widget tests for the multi-turn flow.
+8. Run:
    - dart format .
    - flutter analyze
    - flutter test

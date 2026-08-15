@@ -1,4 +1,6 @@
 import 'package:coach_e/core/auth/auth_cubit.dart';
+import 'package:coach_e/features/coaching/cubit/coaching_history_cubit.dart';
+import 'package:coach_e/features/coaching/models/coaching_models.dart';
 import 'package:coach_e/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -50,14 +52,98 @@ class HomePage extends StatelessWidget {
               onPressed: () => context.go(AppRoutes.coaching),
             ),
             const SizedBox(height: 16),
-            const _ActionPanel(
-              icon: Icons.insights_outlined,
-              title: 'Progress',
-              subtitle: 'Sẽ dùng cho streak, kỹ năng yếu, lịch sử phiên học.',
-              buttonLabel: 'Sắp có',
-              onPressed: null,
-            ),
+            const _RecentSessionsSection(),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentSessionsSection extends StatelessWidget {
+  const _RecentSessionsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CoachingHistoryCubit, CoachingHistoryState>(
+      builder: (context, state) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.insights_outlined, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Recent sessions',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (state.sessions.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: () =>
+                            context.read<CoachingHistoryCubit>().clearHistory(),
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Clear history'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (state.status == CoachingHistoryStatus.loading)
+                  const LinearProgressIndicator()
+                else if (state.sessions.isEmpty)
+                  const Text(
+                    'No sessions yet. Complete one coaching session to start tracking practice.',
+                  )
+                else ...[
+                  for (final session in state.sessions.take(5))
+                    _RecentSessionTile(session: session),
+                ],
+                if (state.errorMessage case final message?) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    message,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RecentSessionTile extends StatelessWidget {
+  const _RecentSessionTile({required this.session});
+
+  final CoachingSessionSummary session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        child: ListTile(
+          leading: CircleAvatar(child: Text('${session.score}')),
+          title: Text(session.goal.label),
+          subtitle: Text('${session.mode.label} • ${session.completedAtLabel}'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.go(AppRoutes.coachingHistorySession(session.id)),
         ),
       ),
     );

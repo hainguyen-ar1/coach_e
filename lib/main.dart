@@ -1,5 +1,7 @@
 import 'package:cyr_app_kit/cyr_app_kit.dart';
 import 'package:coach_e/core/auth/auth_cubit.dart';
+import 'package:coach_e/features/coaching/cubit/coaching_history_cubit.dart';
+import 'package:coach_e/features/coaching/data/coaching_history_repository.dart';
 import 'package:coach_e/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,6 +20,7 @@ class CoachEApp extends StatefulWidget {
 
 class _CoachEAppState extends State<CoachEApp> {
   late final AuthCubit _authCubit;
+  late final CoachingHistoryCubit _historyCubit;
   late final AppRouterRefreshStream _routerRefresh;
   late final RouterConfig<Object> _router;
 
@@ -25,6 +28,9 @@ class _CoachEAppState extends State<CoachEApp> {
   void initState() {
     super.initState();
     _authCubit = AuthCubit();
+    _historyCubit = CoachingHistoryCubit(
+      repository: const CoachingHistoryRepository(),
+    );
     _routerRefresh = AppRouterRefreshStream(_authCubit.stream);
     _router = createAppRouter(
       authCubit: _authCubit,
@@ -35,6 +41,7 @@ class _CoachEAppState extends State<CoachEApp> {
   @override
   void dispose() {
     _routerRefresh.dispose();
+    _historyCubit.close();
     _authCubit.close();
     super.dispose();
   }
@@ -44,6 +51,7 @@ class _CoachEAppState extends State<CoachEApp> {
     return MultiBlocProvider(
       providers: [
         BlocProvider.value(value: _authCubit),
+        BlocProvider.value(value: _historyCubit),
         BlocProvider(create: (_) => ThemeCubit()),
       ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(

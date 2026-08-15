@@ -1,7 +1,10 @@
 import 'package:coach_e/features/coaching/cubit/coaching_cubit.dart';
+import 'package:coach_e/features/coaching/cubit/coaching_history_cubit.dart';
 import 'package:coach_e/features/coaching/models/coaching_models.dart';
+import 'package:coach_e/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class CoachingPage extends StatefulWidget {
   const CoachingPage({super.key});
@@ -357,9 +360,15 @@ class _FeedbackPanel extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: context.read<CoachingCubit>().completeSession,
+                      onPressed: state.canCompleteSession
+                          ? () => context.read<CoachingCubit>().completeSession(
+                              saveSession: context
+                                  .read<CoachingHistoryCubit>()
+                                  .saveCompletedDraft,
+                            )
+                          : null,
                       icon: const Icon(Icons.check_circle_outline),
-                      label: const Text('Hoàn tất'),
+                      label: Text(state.isCompleting ? 'Đang lưu' : 'Hoàn tất'),
                     ),
                   ),
                 ],
@@ -401,10 +410,24 @@ class _SummaryPanel extends StatelessWidget {
               Text('Mode: ${draft.mode?.label ?? '-'}'),
               Text('Score: ${draft.feedback?.score ?? 0}/100'),
               const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: context.read<CoachingCubit>().reset,
-                icon: const Icon(Icons.play_arrow_outlined),
-                label: const Text('Bắt đầu phiên mới'),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.go(AppRoutes.home),
+                      icon: const Icon(Icons.home_outlined),
+                      label: const Text('Về Home'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: context.read<CoachingCubit>().reset,
+                      icon: const Icon(Icons.play_arrow_outlined),
+                      label: const Text('Phiên mới'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

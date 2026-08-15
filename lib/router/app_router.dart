@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:coach_e/core/auth/auth_cubit.dart';
 import 'package:coach_e/features/coaching/cubit/coaching_cubit.dart';
 import 'package:coach_e/features/coaching/coaching_page.dart';
+import 'package:coach_e/features/coaching/session_summary_page.dart';
 import 'package:coach_e/features/home/home_page.dart';
 import 'package:coach_e/features/login/login_page.dart';
 import 'package:coach_e/features/splash/splash_page.dart';
@@ -16,6 +17,11 @@ abstract final class AppRoutes {
   static const login = '/login';
   static const home = '/home';
   static const coaching = '/coaching';
+  static const coachingHistoryDetail = '/coaching/history/:sessionId';
+
+  static String coachingHistorySession(String sessionId) {
+    return '/coaching/history/$sessionId';
+  }
 }
 
 GoRouter createAppRouter({
@@ -61,6 +67,13 @@ GoRouter createAppRouter({
           create: (_) => CoachingCubit(),
           child: const CoachingPage(),
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.coachingHistoryDetail,
+        builder: (context, state) {
+          final sessionId = state.pathParameters['sessionId']!;
+          return CoachingSessionSummaryPage(sessionId: sessionId);
+        },
       ),
     ],
   );
