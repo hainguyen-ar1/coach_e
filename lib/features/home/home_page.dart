@@ -49,7 +49,7 @@ class HomePage extends StatelessWidget {
               subtitle:
                   'Khung luyện tập đầu tiên cho bài nói, phản hồi và mục tiêu.',
               buttonLabel: 'Mở coaching',
-              onPressed: () => context.go(AppRoutes.coaching),
+              onPressed: () => GoRouter.of(context).go(AppRoutes.coaching),
             ),
             const SizedBox(height: 16),
             const _RecentSessionsSection(),
@@ -143,7 +143,9 @@ class _RecentSessionTile extends StatelessWidget {
           title: Text(session.goal.label),
           subtitle: Text('${session.mode.label} • ${session.completedAtLabel}'),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.go(AppRoutes.coachingHistorySession(session.id)),
+          onTap: () => GoRouter.of(
+            context,
+          ).go(AppRoutes.coachingHistorySession(session.id)),
         ),
       ),
     );

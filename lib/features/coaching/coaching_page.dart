@@ -414,7 +414,7 @@ class _SummaryPanel extends StatelessWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => context.go(AppRoutes.home),
+                      onPressed: () => GoRouter.of(context).go(AppRoutes.home),
                       icon: const Icon(Icons.home_outlined),
                       label: const Text('Về Home'),
                     ),
