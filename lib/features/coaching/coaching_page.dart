@@ -26,7 +26,8 @@ class _CoachingPageState extends State<CoachingPage> {
   Widget build(BuildContext context) {
     return BlocListener<CoachingCubit, CoachingState>(
       listenWhen: (previous, current) =>
-          previous.draft.response != current.draft.response,
+          previous.draft.response != current.draft.response ||
+          previous.draft.currentTurnIndex != current.draft.currentTurnIndex,
       listener: (context, state) {
         if (_responseController.text == state.draft.response) return;
         _responseController.text = state.draft.response;
@@ -359,17 +360,31 @@ class _FeedbackPanel extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: FilledButton.icon(
-                      onPressed: state.canCompleteSession
-                          ? () => context.read<CoachingCubit>().completeSession(
-                              saveSession: context
-                                  .read<CoachingHistoryCubit>()
-                                  .saveCompletedDraft,
-                            )
-                          : null,
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: Text(state.isCompleting ? 'Đang lưu' : 'Hoàn tất'),
-                    ),
+                    child: state.canContinueToNextTurn
+                        ? FilledButton.icon(
+                            onPressed: () {
+                              context
+                                  .read<CoachingCubit>()
+                                  .continueToNextTurn();
+                            },
+                            icon: const Icon(Icons.arrow_forward),
+                            label: const Text('Lượt tiếp theo'),
+                          )
+                        : FilledButton.icon(
+                            onPressed: state.canCompleteSession
+                                ? () => context
+                                      .read<CoachingCubit>()
+                                      .completeSession(
+                                        saveSession: context
+                                            .read<CoachingHistoryCubit>()
+                                            .saveCompletedDraft,
+                                      )
+                                : null,
+                            icon: const Icon(Icons.check_circle_outline),
+                            label: Text(
+                              state.isCompleting ? 'Đang lưu' : 'Hoàn tất',
+                            ),
+                          ),
                   ),
                 ],
               ),

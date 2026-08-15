@@ -27,7 +27,14 @@ class CoachingState {
 
   bool get canSubmitResponse => draft.response.trim().length >= 12;
   bool get canCompleteSession =>
-      draft.feedback != null && completedSessionId == null && !isCompleting;
+      draft.feedback != null &&
+      (!draft.hasMultiTurnSession || draft.allTurnsComplete) &&
+      completedSessionId == null &&
+      !isCompleting;
+  bool get canContinueToNextTurn =>
+      draft.hasMultiTurnSession &&
+      draft.currentTurn?.feedback != null &&
+      !draft.isOnLastTurn;
 
   CoachingState copyWith({
     CoachingStep? step,
@@ -80,8 +87,16 @@ class CoachingCubit extends Cubit<CoachingState> {
         step: CoachingStep.drafting,
         draft: state.draft.copyWith(
           mode: mode,
-          prompt: _promptFor(goal, mode),
+          prompt: _promptsFor(goal, mode).first,
           response: '',
+          turns: _promptsFor(goal, mode)
+              .asMap()
+              .entries
+              .map(
+                (entry) => CoachingTurn(index: entry.key, prompt: entry.value),
+              )
+              .toList(),
+          currentTurnIndex: 0,
           clearFeedback: true,
         ),
         clearError: true,
@@ -92,7 +107,7 @@ class CoachingCubit extends Cubit<CoachingState> {
   void updateResponse(String value) {
     emit(
       state.copyWith(
-        draft: state.draft.copyWith(response: value, clearFeedback: true),
+        draft: _updateCurrentTurnResponse(value),
         clearError: true,
       ),
     );
@@ -125,11 +140,27 @@ class CoachingCubit extends Cubit<CoachingState> {
     emit(
       state.copyWith(
         step: CoachingStep.feedback,
-        draft: state.draft.copyWith(
-          response: response,
-          feedback: _feedbackFor(goal, mode, response),
-        ),
+        draft: _submitCurrentTurn(goal, mode, response),
         clearCompletedSession: true,
+        clearError: true,
+      ),
+    );
+  }
+
+  void continueToNextTurn() {
+    if (!state.canContinueToNextTurn) return;
+
+    final nextTurnIndex = state.draft.currentTurnIndex + 1;
+    final nextTurn = state.draft.turns[nextTurnIndex];
+    emit(
+      state.copyWith(
+        step: CoachingStep.drafting,
+        draft: state.draft.copyWith(
+          currentTurnIndex: nextTurnIndex,
+          prompt: nextTurn.prompt,
+          response: nextTurn.response,
+          feedback: nextTurn.feedback,
+        ),
         clearError: true,
       ),
     );
@@ -185,6 +216,82 @@ class CoachingCubit extends Cubit<CoachingState> {
 
   void reset() {
     emit(const CoachingState.initial());
+  }
+
+  CoachingSessionDraft _updateCurrentTurnResponse(String value) {
+    if (state.draft.turns.isEmpty) {
+      return state.draft.copyWith(response: value, clearFeedback: true);
+    }
+
+    final turnIndex = state.draft.currentTurnIndex;
+    final turns = [
+      for (final turn in state.draft.turns)
+        if (turn.index == turnIndex)
+          turn.copyWith(response: value, clearFeedback: true)
+        else
+          turn,
+    ];
+
+    return state.draft.copyWith(
+      response: value,
+      feedback: null,
+      turns: turns,
+      clearFeedback: true,
+    );
+  }
+
+  CoachingSessionDraft _submitCurrentTurn(
+    CoachingGoal goal,
+    PracticeMode mode,
+    String response,
+  ) {
+    final feedback = _feedbackFor(goal, mode, response);
+    if (state.draft.turns.isEmpty) {
+      return state.draft.copyWith(response: response, feedback: feedback);
+    }
+
+    final turnIndex = state.draft.currentTurnIndex;
+    final turns = [
+      for (final turn in state.draft.turns)
+        if (turn.index == turnIndex)
+          turn.copyWith(response: response, feedback: feedback)
+        else
+          turn,
+    ];
+
+    return state.draft.copyWith(
+      response: response,
+      feedback: feedback,
+      turns: turns,
+    );
+  }
+
+  List<CoachingPrompt> _promptsFor(CoachingGoal goal, PracticeMode mode) {
+    if (goal == CoachingGoal.speakingConfidence &&
+        mode == PracticeMode.textResponse) {
+      return const [
+        CoachingPrompt(
+          title: 'Turn 1: Warm-up answer',
+          instruction:
+              'Write a calm 2-3 sentence answer about a recent difficult conversation.',
+          hint: 'Focus on one clear idea and keep the tone steady.',
+        ),
+        CoachingPrompt(
+          title: 'Turn 2: Concrete example',
+          instruction:
+              'Add a specific example: what happened, what you said, and why.',
+          hint: 'Use “when” or “because” to make the answer more believable.',
+        ),
+        CoachingPrompt(
+          title: 'Turn 3: Improved final version',
+          instruction:
+              'Rewrite the answer as a polished version you could say out loud.',
+          hint: 'Make it concise, structured, and easy to speak slowly.',
+        ),
+      ];
+    }
+
+    return [_promptFor(goal, mode)];
   }
 
   CoachingPrompt _promptFor(CoachingGoal goal, PracticeMode mode) {

@@ -30,6 +30,7 @@ Routes:
 - `/login` - hardcoded login
 - `/home` - authenticated home
 - `/coaching` - first coaching placeholder
+- `/coaching/history/:sessionId` - read-only completed session summary
 
 Auth guard behavior:
 
@@ -175,7 +176,9 @@ git diff --check
 - No Firebase initialization or push flow wired yet.
 - No real AI/backend feedback yet.
 - No audio recording flow yet.
+- No multi-turn coaching session yet; the current flow handles one prompt and one response.
 - No editable/resumable in-progress session drafts yet.
+- No analytics or progress comparison beyond a simple recent-session list.
 
 ## Recommended next feature slice
 
@@ -207,27 +210,38 @@ Suggested practice modes:
 Use this prompt to continue:
 
 ```text
-Implement a deeper multi-turn coaching practice flow for Coach E.
+Implement the next feature slice for Coach E: a deeper multi-turn coaching
+practice flow with local-only state.
 
 Context:
 - Read AGENTS.md, docs/coach_e_requirements.md, docs/stranger_confide_reuse_plan.md, and docs/project_state_and_next_prompt.md first.
 - Do not integrate backend yet.
 - Keep hardcoded/local auth as-is.
-- Use the existing app shell, go_router, flutter_bloc, cyr_app_kit theme, completed CoachingCubit flow, and local session history.
+- Use the existing app shell, go_router, flutter_bloc, cyr_app_kit theme, CoachingCubit flow, and local session history.
 - Follow package imports and flutter_lints.
 
 Goal:
-Make one coaching practice mode feel more complete by supporting multiple prompt turns before final feedback.
+Make one coaching practice mode feel more complete by supporting multiple
+prompt turns before final feedback and by saving a richer session summary.
 
 Requirements:
 1. Pick one initial path, preferably Speaking confidence + Text response.
-2. Add 2-3 deterministic prompt turns in one session.
-3. Track each learner response locally inside the active session.
-4. Generate per-turn placeholder feedback.
-5. Generate a final summary that still saves to local history.
-6. Keep reopen summary read-only.
-7. Add focused widget tests for the multi-turn flow.
-8. Run:
+2. Add 3 deterministic prompt turns in one session:
+   - warm-up answer
+   - concrete example
+   - improved final version
+3. Track each turn locally with prompt, learner response, placeholder feedback, and score.
+4. Let the learner move forward only after each response has enough content.
+5. Generate per-turn placeholder feedback immediately after each submitted response.
+6. Generate a final summary that includes overall score, strengths, improvements, next step, and all turn responses.
+7. Save the completed session to the existing local history storage.
+8. Keep reopened summaries read-only, and show the multi-turn details there.
+9. Keep backward compatibility with existing saved one-turn summaries if practical; otherwise handle old entries gracefully.
+10. Add focused widget tests for:
+   - completing all turns
+   - saving and reopening a multi-turn summary
+   - preventing submit on too-short responses
+11. Run:
    - dart format .
    - flutter analyze
    - flutter test

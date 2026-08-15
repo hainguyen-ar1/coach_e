@@ -82,6 +82,78 @@ class CoachingFeedback {
   final int score;
 }
 
+class CoachingTurn {
+  const CoachingTurn({
+    required this.index,
+    required this.prompt,
+    this.response = '',
+    this.feedback,
+  });
+
+  factory CoachingTurn.fromJson(Map<String, dynamic> json) {
+    return CoachingTurn(
+      index: json['index'] as int,
+      prompt: CoachingPrompt(
+        title: json['promptTitle'] as String,
+        instruction: json['promptInstruction'] as String,
+        hint: json['promptHint'] as String? ?? '',
+      ),
+      response: json['learnerResponse'] as String? ?? '',
+      feedback: json['feedbackHeadline'] == null
+          ? null
+          : CoachingFeedback(
+              headline: json['feedbackHeadline'] as String,
+              strengths: List<String>.unmodifiable(
+                (json['strengths'] as List<dynamic>? ?? const [])
+                    .cast<String>(),
+              ),
+              improvements: List<String>.unmodifiable(
+                (json['improvements'] as List<dynamic>? ?? const [])
+                    .cast<String>(),
+              ),
+              nextStep: json['nextStep'] as String? ?? '',
+              score: json['score'] as int? ?? 0,
+            ),
+    );
+  }
+
+  final int index;
+  final CoachingPrompt prompt;
+  final String response;
+  final CoachingFeedback? feedback;
+
+  bool get isComplete => response.trim().isNotEmpty && feedback != null;
+
+  CoachingTurn copyWith({
+    CoachingPrompt? prompt,
+    String? response,
+    CoachingFeedback? feedback,
+    bool clearFeedback = false,
+  }) {
+    return CoachingTurn(
+      index: index,
+      prompt: prompt ?? this.prompt,
+      response: response ?? this.response,
+      feedback: clearFeedback ? null : feedback ?? this.feedback,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'index': index,
+      'promptTitle': prompt.title,
+      'promptInstruction': prompt.instruction,
+      'promptHint': prompt.hint,
+      'learnerResponse': response,
+      'feedbackHeadline': feedback?.headline,
+      'strengths': feedback?.strengths ?? const [],
+      'improvements': feedback?.improvements ?? const [],
+      'nextStep': feedback?.nextStep,
+      'score': feedback?.score,
+    };
+  }
+}
+
 class CoachingSessionDraft {
   const CoachingSessionDraft({
     this.goal,
@@ -89,6 +161,8 @@ class CoachingSessionDraft {
     this.prompt,
     this.response = '',
     this.feedback,
+    this.turns = const [],
+    this.currentTurnIndex = 0,
   });
 
   final CoachingGoal? goal;
@@ -96,6 +170,23 @@ class CoachingSessionDraft {
   final CoachingPrompt? prompt;
   final String response;
   final CoachingFeedback? feedback;
+  final List<CoachingTurn> turns;
+  final int currentTurnIndex;
+
+  CoachingTurn? get currentTurn {
+    if (turns.isEmpty ||
+        currentTurnIndex < 0 ||
+        currentTurnIndex >= turns.length) {
+      return null;
+    }
+    return turns[currentTurnIndex];
+  }
+
+  bool get hasMultiTurnSession => turns.isNotEmpty;
+  bool get isOnLastTurn =>
+      turns.isEmpty || currentTurnIndex == turns.length - 1;
+  bool get allTurnsComplete =>
+      turns.isNotEmpty && turns.every((turn) => turn.isComplete);
 
   CoachingSessionDraft copyWith({
     CoachingGoal? goal,
@@ -103,6 +194,8 @@ class CoachingSessionDraft {
     CoachingPrompt? prompt,
     String? response,
     CoachingFeedback? feedback,
+    List<CoachingTurn>? turns,
+    int? currentTurnIndex,
     bool clearMode = false,
     bool clearPrompt = false,
     bool clearFeedback = false,
@@ -113,6 +206,8 @@ class CoachingSessionDraft {
       prompt: clearPrompt ? null : prompt ?? this.prompt,
       response: response ?? this.response,
       feedback: clearFeedback ? null : feedback ?? this.feedback,
+      turns: turns ?? this.turns,
+      currentTurnIndex: currentTurnIndex ?? this.currentTurnIndex,
     );
   }
 }
@@ -131,6 +226,7 @@ class CoachingSessionSummary {
     required this.improvements,
     required this.nextStep,
     required this.score,
+    this.turns = const [],
   });
 
   factory CoachingSessionSummary.fromDraft(
@@ -146,6 +242,27 @@ class CoachingSessionSummary {
     }
 
     final finishedAt = completedAt ?? DateTime.now();
+    final turns = draft.turns.isEmpty
+        ? [
+            CoachingTurn(
+              index: 0,
+              prompt: prompt,
+              response: draft.response.trim(),
+              feedback: feedback,
+            ),
+          ]
+        : draft.turns;
+    final completedTurns = turns
+        .where((turn) => turn.feedback != null)
+        .toList();
+    final score = completedTurns.isEmpty
+        ? feedback.score
+        : (completedTurns
+                      .map((turn) => turn.feedback?.score ?? 0)
+                      .fold<int>(0, (sum, value) => sum + value) /
+                  completedTurns.length)
+              .round();
+
     return CoachingSessionSummary(
       id: 'session-${finishedAt.microsecondsSinceEpoch}',
       completedAt: finishedAt,
@@ -154,11 +271,20 @@ class CoachingSessionSummary {
       promptTitle: prompt.title,
       promptInstruction: prompt.instruction,
       learnerResponse: draft.response.trim(),
-      feedbackHeadline: feedback.headline,
-      strengths: List<String>.unmodifiable(feedback.strengths),
-      improvements: List<String>.unmodifiable(feedback.improvements),
-      nextStep: feedback.nextStep,
-      score: feedback.score,
+      feedbackHeadline: draft.turns.isEmpty
+          ? feedback.headline
+          : 'Completed ${completedTurns.length}-turn ${goal.label.toLowerCase()} practice',
+      strengths: List<String>.unmodifiable(
+        _mergeFeedbackItems(completedTurns, true),
+      ),
+      improvements: List<String>.unmodifiable(
+        _mergeFeedbackItems(completedTurns, false),
+      ),
+      nextStep: completedTurns.isEmpty
+          ? feedback.nextStep
+          : completedTurns.last.feedback?.nextStep ?? feedback.nextStep,
+      score: score,
+      turns: List<CoachingTurn>.unmodifiable(turns),
     );
   }
 
@@ -168,6 +294,15 @@ class CoachingSessionSummary {
     if (goal == null || mode == null) {
       throw const FormatException('Unknown coaching goal or practice mode.');
     }
+
+    final turnsJson = json['turns'];
+    final turns = turnsJson is List
+        ? List<CoachingTurn>.unmodifiable(
+            turnsJson.whereType<Map<String, dynamic>>().map(
+              CoachingTurn.fromJson,
+            ),
+          )
+        : const <CoachingTurn>[];
 
     return CoachingSessionSummary(
       id: json['id'] as String,
@@ -186,6 +321,7 @@ class CoachingSessionSummary {
       ),
       nextStep: json['nextStep'] as String,
       score: json['score'] as int,
+      turns: turns,
     );
   }
 
@@ -201,6 +337,7 @@ class CoachingSessionSummary {
   final List<String> improvements;
   final String nextStep;
   final int score;
+  final List<CoachingTurn> turns;
 
   Map<String, dynamic> toJson() {
     return {
@@ -216,6 +353,7 @@ class CoachingSessionSummary {
       'improvements': improvements,
       'nextStep': nextStep,
       'score': score,
+      'turns': [for (final turn in turns) turn.toJson()],
     };
   }
 
@@ -235,5 +373,22 @@ class CoachingSessionSummary {
       if (value.name == name) return value;
     }
     return null;
+  }
+
+  static List<String> _mergeFeedbackItems(
+    List<CoachingTurn> completedTurns,
+    bool strengths,
+  ) {
+    final items = <String>[];
+    for (final turn in completedTurns) {
+      final feedback = turn.feedback;
+      if (feedback == null) continue;
+      items.addAll(strengths ? feedback.strengths : feedback.improvements);
+    }
+    return items.isEmpty
+        ? strengths
+              ? const ['You completed the practice session.']
+              : const ['Keep adding concrete details in the next practice.']
+        : items.toSet().take(4).toList();
   }
 }
