@@ -8,6 +8,7 @@ Flutter mobile app. This repo is a Coach E product that reuses selected architec
 
 - `docs/coach_e_requirements.md`
 - `docs/stranger_confide_reuse_plan.md`
+- `docs/project_state_and_next_prompt.md`
 - If backend/API work is in scope, read the relevant reference API doc from `/Users/hainguyen/dev/talkfirst/stranger_confide/docs/api/` instead of preloading every API file.
 
 ## Engineering conventions

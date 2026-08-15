@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:coach_e/core/auth/auth_cubit.dart';
+import 'package:coach_e/features/coaching/cubit/coaching_cubit.dart';
 import 'package:coach_e/features/coaching/coaching_page.dart';
 import 'package:coach_e/features/home/home_page.dart';
 import 'package:coach_e/features/login/login_page.dart';
 import 'package:coach_e/features/splash/splash_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 abstract final class AppRoutes {
@@ -55,7 +57,10 @@ GoRouter createAppRouter({
       ),
       GoRoute(
         path: AppRoutes.coaching,
-        builder: (context, state) => const CoachingPage(),
+        builder: (context, state) => BlocProvider(
+          create: (_) => CoachingCubit(),
+          child: const CoachingPage(),
+        ),
       ),
     ],
   );

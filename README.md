@@ -42,3 +42,4 @@ flutter test
 
 - `docs/coach_e_requirements.md`
 - `docs/stranger_confide_reuse_plan.md`
+- `docs/project_state_and_next_prompt.md`
