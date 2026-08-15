@@ -1,16 +1,44 @@
-# coach_e
+# Coach E
 
-A new Flutter project.
+Flutter mobile app for coaching workflows.
 
-## Getting Started
+## Current milestone
 
-This project is a starting point for a Flutter application.
+The app is currently set up with:
 
-A few resources to get you started if this is your first Flutter project:
+- App shell using `go_router`.
+- Shared theme from `cyr_app_kit`.
+- Local-only hardcoded auth flow.
+- Home screen with a coaching entry point.
+- Placeholder coaching session screen.
+- Common dependencies copied from Stranger Confide for networking, DI, codegen,
+  i18n, media, realtime, and app utilities.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Coach E will use its own backend later. It does not use the Stranger Confide backend.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Local dependencies
+
+This project depends on local packages:
+
+- `/Users/hainguyen/dev/cyr_flutter_core`
+- `/Users/hainguyen/dev/talkfirst/cyr_app_kit`
+
+## Run
+
+```bash
+flutter pub get
+flutter run
+```
+
+## Verify
+
+```bash
+dart format .
+flutter analyze
+flutter test
+```
+
+## Planning docs
+
+- `docs/coach_e_requirements.md`
+- `docs/stranger_confide_reuse_plan.md`
