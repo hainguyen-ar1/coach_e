@@ -339,6 +339,29 @@ class CoachingSessionSummary {
   final int score;
   final List<CoachingTurn> turns;
 
+  List<CoachingTurn> get displayTurns {
+    if (turns.isNotEmpty) return turns;
+
+    return [
+      CoachingTurn(
+        index: 0,
+        prompt: CoachingPrompt(
+          title: promptTitle,
+          instruction: promptInstruction,
+          hint: '',
+        ),
+        response: learnerResponse,
+        feedback: CoachingFeedback(
+          headline: feedbackHeadline,
+          strengths: strengths,
+          improvements: improvements,
+          nextStep: nextStep,
+          score: score,
+        ),
+      ),
+    ];
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

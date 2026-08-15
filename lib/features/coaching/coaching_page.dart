@@ -55,6 +55,10 @@ class _CoachingPageState extends State<CoachingPage> {
                   const _Header(),
                   const SizedBox(height: 18),
                   _ProgressRail(step: state.step),
+                  if (state.draft.hasMultiTurnSession) ...[
+                    const SizedBox(height: 12),
+                    _TurnProgress(draft: state.draft),
+                  ],
                   const SizedBox(height: 20),
                   if (state.errorMessage case final message?)
                     _InlineError(message: message),
@@ -145,6 +149,43 @@ class _ProgressRail extends StatelessWidget {
   }
 }
 
+class _TurnProgress extends StatelessWidget {
+  const _TurnProgress({required this.draft});
+
+  final CoachingSessionDraft draft;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final currentTurnNumber = draft.currentTurnIndex + 1;
+    final completedCount = draft.turns.where((turn) => turn.isComplete).length;
+
+    return Material(
+      color: colorScheme.secondaryContainer.withValues(alpha: 0.45),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(Icons.route_outlined, color: colorScheme.onSecondaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Turn $currentTurnNumber/${draft.turns.length} • $completedCount completed',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSecondaryContainer,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _GoalPicker extends StatelessWidget {
   const _GoalPicker({required this.state});
 
@@ -228,9 +269,14 @@ class _PromptAndResponse extends StatelessWidget {
   Widget build(BuildContext context) {
     final prompt = state.draft.prompt!;
     final textTheme = Theme.of(context).textTheme;
+    final turn = state.draft.currentTurn;
+    final turnLabel = turn == null
+        ? null
+        : 'Turn ${turn.index + 1} of ${state.draft.turns.length}';
 
     return _Section(
       title: '3. Luyện phản hồi',
+      trailing: turnLabel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -405,6 +451,21 @@ class _SummaryPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final draft = state.draft;
     final textTheme = Theme.of(context).textTheme;
+    final completedTurns = draft.turns
+        .where((turn) => turn.isComplete)
+        .toList();
+    final overallScore = completedTurns.isEmpty
+        ? draft.feedback?.score ?? 0
+        : (completedTurns
+                      .map((turn) => turn.feedback?.score ?? 0)
+                      .fold<int>(0, (sum, score) => sum + score) /
+                  completedTurns.length)
+              .round();
+    final strengths = _combinedFeedbackItems(completedTurns, true);
+    final improvements = _combinedFeedbackItems(completedTurns, false);
+    final nextStep = completedTurns.isEmpty
+        ? draft.feedback?.nextStep
+        : completedTurns.last.feedback?.nextStep;
 
     return _Section(
       title: '5. Summary',
@@ -423,7 +484,36 @@ class _SummaryPanel extends StatelessWidget {
               const SizedBox(height: 10),
               Text('Goal: ${draft.goal?.label ?? '-'}'),
               Text('Mode: ${draft.mode?.label ?? '-'}'),
-              Text('Score: ${draft.feedback?.score ?? 0}/100'),
+              Text('Score: $overallScore/100'),
+              if (strengths.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                _FeedbackList(title: 'Điểm mạnh', items: strengths),
+              ],
+              if (improvements.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _FeedbackList(title: 'Cần chỉnh', items: improvements),
+              ],
+              if (nextStep != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Next step',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(nextStep),
+              ],
+              if (completedTurns.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                _FeedbackList(
+                  title: 'Completed turns',
+                  items: [
+                    for (final turn in completedTurns)
+                      '${turn.prompt.title}: ${turn.response}',
+                  ],
+                ),
+              ],
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -449,6 +539,19 @@ class _SummaryPanel extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<String> _combinedFeedbackItems(
+    List<CoachingTurn> completedTurns,
+    bool strengths,
+  ) {
+    final items = <String>[];
+    for (final turn in completedTurns) {
+      final feedback = turn.feedback;
+      if (feedback == null) continue;
+      items.addAll(strengths ? feedback.strengths : feedback.improvements);
+    }
+    return items.toSet().take(4).toList();
   }
 }
 

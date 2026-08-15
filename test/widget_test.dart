@@ -36,12 +36,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Session summary'), findsOneWidget);
-    expect(find.text('Learner response'), findsOneWidget);
-    expect(find.text(learnerResponses.last), findsOneWidget);
+    expect(find.text('Learner response'), findsWidgets);
     expect(
       find.text('Completed 3-turn speaking confidence practice'),
       findsOneWidget,
     );
+    expect(find.text('Turn 1: Warm-up answer'), findsOneWidget);
+    expect(find.text('Turn 2: Concrete example'), findsOneWidget);
+    await _scrollToText(tester, 'Turn 3: Improved final version');
+    expect(find.text('Turn 3: Improved final version'), findsOneWidget);
+    expect(find.text(learnerResponses.last), findsOneWidget);
   });
 
   testWidgets('clear history removes recent sessions from Home', (

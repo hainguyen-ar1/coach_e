@@ -130,6 +130,8 @@ class _RecentSessionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final turnCount = session.displayTurns.length;
+
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Material(
@@ -141,7 +143,9 @@ class _RecentSessionTile extends StatelessWidget {
         child: ListTile(
           leading: CircleAvatar(child: Text('${session.score}')),
           title: Text(session.goal.label),
-          subtitle: Text('${session.mode.label} • ${session.completedAtLabel}'),
+          subtitle: Text(
+            '${session.mode.label} • $turnCount ${turnCount == 1 ? 'turn' : 'turns'} • ${session.completedAtLabel}',
+          ),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => GoRouter.of(
             context,

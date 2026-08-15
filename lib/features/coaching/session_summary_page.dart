@@ -66,69 +66,129 @@ class _SummaryBody extends StatelessWidget {
           style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 6),
-        Text('${session.mode.label} • ${session.completedAtLabel}'),
+        Text(
+          '${session.mode.label} • ${session.completedAtLabel} • ${session.score}/100',
+        ),
         const SizedBox(height: 18),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  session.promptTitle,
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(session.promptInstruction),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
         _ReadOnlySection(
-          title: 'Learner response',
-          child: Text(session.learnerResponse),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        session.feedbackHeadline,
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+          title: 'Overall feedback',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      session.feedbackHeadline,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    CircleAvatar(radius: 24, child: Text('${session.score}')),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                _BulletList(title: 'Điểm mạnh', items: session.strengths),
-                const SizedBox(height: 12),
-                _BulletList(title: 'Cần chỉnh', items: session.improvements),
-                const SizedBox(height: 12),
-                Text(
-                  'Next step',
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
                   ),
+                  CircleAvatar(radius: 24, child: Text('${session.score}')),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _BulletList(title: 'Điểm mạnh', items: session.strengths),
+              const SizedBox(height: 12),
+              _BulletList(title: 'Cần chỉnh', items: session.improvements),
+              const SizedBox(height: 12),
+              Text(
+                'Next step',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(height: 4),
-                Text(session.nextStep),
-              ],
-            ),
+              ),
+              const SizedBox(height: 4),
+              Text(session.nextStep),
+            ],
           ),
         ),
+        const SizedBox(height: 12),
+        for (final turn in session.displayTurns) ...[
+          _TurnSummaryCard(turn: turn),
+          const SizedBox(height: 12),
+        ],
       ],
+    );
+  }
+}
+
+class _TurnSummaryCard extends StatelessWidget {
+  const _TurnSummaryCard({required this.turn});
+
+  final CoachingTurn turn;
+
+  @override
+  Widget build(BuildContext context) {
+    final feedback = turn.feedback;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    turn.prompt.title,
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (feedback != null)
+                  CircleAvatar(radius: 20, child: Text('${feedback.score}')),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(turn.prompt.instruction),
+            if (turn.prompt.hint.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                turn.prompt.hint,
+                style: textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            Text(
+              'Learner response',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(turn.response),
+            if (feedback != null) ...[
+              const SizedBox(height: 14),
+              Text(
+                feedback.headline,
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _BulletList(title: 'Điểm mạnh', items: feedback.strengths),
+              const SizedBox(height: 10),
+              _BulletList(title: 'Cần chỉnh', items: feedback.improvements),
+              const SizedBox(height: 10),
+              Text(
+                'Next step',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(feedback.nextStep),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
